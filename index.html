@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>レインボーかぶとがにガチャ</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=MURECHO:wght@400;700;900&display=swap');
+        
+        body {
+            font-family: 'MURECHO', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        /* ドラムの視覚スタイル */
+        .drum-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 1.5rem;
+        }
+
+        .drum-reel {
+            will-change: transform;
+        }
+
+        /* 画面およびスロット内の輝くキラキラアニメーション */
+        @keyframes sparkleGlitter {
+            0% { opacity: 0.3; filter: hue-rotate(0deg) brightness(1.2); transform: scale(1); }
+            50% { opacity: 0.9; filter: hue-rotate(180deg) brightness(1.8); transform: scale(1.05); }
+            100% { opacity: 0.3; filter: hue-rotate(360deg) brightness(1.2); transform: scale(1); }
+        }
+
+        .glitter-active {
+            animation: sparkleGlitter 0.35s infinite ease-in-out;
+        }
+
+        /* キラキラ粒子の浮遊効果 */
+        @keyframes floatSparkle {
+            0% { transform: translateY(0px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(-80px) rotate(360deg); opacity: 0; }
+        }
+
+        .sparkle-particle {
+            position: absolute;
+            pointer-events: none;
+            animation: floatSparkle 0.8s forwards ease-out;
+        }
+
+        /* カブトガニSVGドロップシドウ */
+        .color-red { fill: #EF4444; filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.8)); }
+        .color-orange { fill: #F97316; filter: drop-shadow(0 0 12px rgba(249, 115, 22, 0.8)); }
+        .color-yellow { fill: #EAB308; filter: drop-shadow(0 0 12px rgba(234, 179, 8, 0.8)); }
+        .color-green { fill: #22C55E; filter: drop-shadow(0 0 12px rgba(34, 197, 94, 0.8)); }
+        .color-blue { fill: #3B82F6; filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.8)); }
+        .color-indigo { fill: #6366F1; filter: drop-shadow(0 0 12px rgba(99, 102, 241, 0.8)); }
+        .color-purple { fill: #A855F7; filter: drop-shadow(0 0 12px rgba(168, 85, 247, 0.8)); }
+        .color-white { fill: #FFFFFF; stroke: #000000; stroke-width: 3px; filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.9)); }
+        .color-black { fill: #0F172A; stroke: #FFFFFF; stroke-width: 4px; filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.5)); }
+
+        @keyframes taikoImpact {
+            0% { transform: scale(2.5); filter: brightness(2); }
+            50% { transform: scale(0.85); }
+            100% { transform: scale(1); filter: brightness(1); }
+        }
+        .taiko-zoom {
+            animation: taikoImpact 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.27) forwards;
+        }
+
+        /* 点滅スピード3倍（0.66秒周期）のパルス */
+        @keyframes pulseFast {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .animate-pulse-fast {
+            animation: pulseFast 0.66s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        /* スクリーンセーバー用スタイル */
+        #screensaverOverlay {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease-in-out;
+        }
+        #screensaverOverlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-white min-h-screen flex flex-col justify-between overflow-x-hidden selection:bg-pink-500 selection:text-white">
+
+    <!-- 背景エフェクトキャンバス (花火・紙吹雪用) -->
+    <canvas id="fxCanvas" class="fixed inset-0 pointer-events-none z-30 w-full h-full"></canvas>
+
+    <!-- スクリーンセーバーオーバーレイ -->
+    <div id="screensaverOverlay" class="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center cursor-pointer overflow-hidden select-none">
+        <div class="absolute inset-0 bg-gradient-to-r from-red-500/10 via-yellow-500/10 via-green-500/10 via-blue-500/10 to-purple-500/10 animate-pulse"></div>
+        <div class="text-center z-10 px-4">
+            <h2 class="text-2xl sm:text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-yellow-400 to-purple-600 mb-6 drop-shadow-lg">
+                ✨ レインボーかぶとがにガチャ ✨
+            </h2>
+            <div id="ssSlotContainer" class="w-64 h-64 sm:w-96 sm:h-96 md:w-[32rem] md:h-[32rem] mx-auto bg-slate-900 border-8 border-yellow-400 rounded-3xl shadow-[0_0_60px_rgba(234,179,8,0.5)] relative overflow-hidden flex items-center justify-center">
+                <div id="ssReel" class="absolute top-0 w-full flex flex-col items-center">
+                    <!-- SS用リールアイテム -->
+                </div>
+            </div>
+            <div class="mt-8 animate-bounce">
+                <span class="inline-block bg-yellow-400 text-slate-950 font-black text-lg sm:text-2xl px-8 py-3 rounded-full shadow-2xl border-4 border-yellow-200">
+                    👆 画面をタップしてメインにもどる 👆
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- メインコンテンツコンテナ -->
+    <div class="relative z-10 flex flex-col h-screen max-w-5xl mx-auto w-full p-2 sm:p-4 justify-between">
+        
+        <!-- ヘッダータイトル -->
+        <header class="text-center py-1 sm:py-2 flex-shrink-0">
+            <h1 class="text-xl sm:text-3xl md:text-4xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-yellow-400 via-green-400 via-blue-500 to-purple-600 drop-shadow-md">
+                ✨ レインボーかぶとがにガチャ ✨
+            </h1>
+            <p id="statusMessage" class="text-xs sm:text-sm font-semibold text-slate-300 mt-1">
+                「スタート」を押して運命のかぶとがにを引き当てよう！（残り <span id="totalCount" class="text-yellow-400 font-bold">100</span> 本）
+            </p>
+        </header>
+
+        <!-- 結果表示バッジ（タイトルとスロットの間に配置して尾との重なりを防止） -->
+        <div id="resultBadge" class="flex justify-center my-1 z-30 opacity-0 transform translate-y-2 transition-all duration-300 pointer-events-none">
+            <div id="resultText" class="text-base sm:text-2xl font-black tracking-wider px-6 py-1.5 rounded-xl shadow-2xl border-4 bg-slate-950/95 text-center drop-shadow-2xl">
+                -
+            </div>
+        </div>
+
+        <!-- メインプレイエリア（さらに縦長となったスロット枠と左右ボタン） -->
+        <main class="flex-grow flex items-center justify-center my-1 relative px-2 gap-2 sm:gap-6">
+            
+            <!-- スタートボタン (左側・スタート待ち時に高速点滅) -->
+            <button id="startBtn" onclick="handleStart()" class="w-16 sm:w-28 md:w-36 h-64 sm:h-80 md:h-[26rem] bg-gradient-to-b from-emerald-400 via-emerald-500 to-emerald-700 hover:from-emerald-300 hover:to-emerald-600 active:scale-95 text-white font-black text-lg sm:text-2xl rounded-2xl shadow-2xl border-b-8 border-emerald-900 transition-all flex flex-col items-center justify-center gap-2 flex-shrink-0 cursor-pointer animate-pulse-fast">
+                <svg class="w-8 h-8 sm:w-12 sm:h-12 fill-current drop-shadow" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <span>ス<br>タ<br>丨<br>ト</span>
+            </button>
+
+            <!-- スロットエリア (より縦長長方形) -->
+            <div id="slotFrame" class="flex-grow max-w-md h-72 sm:h-96 md:h-[28rem] bg-slate-900 border-4 border-yellow-500/80 rounded-3xl shadow-[0_0_35px_rgba(234,179,8,0.25)] relative overflow-hidden flex flex-col items-center justify-between drum-container transition-all">
+                
+                <!-- 枠内のギラギラキラキラオーバーレイ -->
+                <div id="glitterOverlay" class="absolute inset-0 pointer-events-none bg-gradient-to-b from-yellow-400/30 via-pink-500/30 to-cyan-400/30 opacity-0 z-10"></div>
+                
+                <!-- 上下グラデーションシャドウ (奥行き演出) -->
+                <div class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-slate-950 via-slate-950/80 to-transparent z-20 pointer-events-none"></div>
+                <div class="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent z-20 pointer-events-none"></div>
+                
+                <!-- 枠線のゴールド装飾 -->
+                <div class="absolute inset-0 border-4 border-yellow-400/40 rounded-2xl pointer-events-none z-20"></div>
+
+                <!-- 当たり判定中央枠マーク -->
+                <div class="absolute inset-x-1 top-1/2 -translate-y-1/2 h-44 sm:h-60 md:h-72 border-4 border-yellow-400 bg-yellow-400/10 rounded-2xl pointer-events-none z-20 flex justify-between items-center px-2 shadow-[0_0_20px_rgba(250,204,21,0.6)]">
+                    <span class="text-yellow-400 text-2xl font-black animate-pulse">▶</span>
+                    <span class="text-yellow-400 text-2xl font-black animate-pulse">◀</span>
+                </div>
+
+                <!-- キラキラ粒子湧き出し用コンテナ -->
+                <div id="sparkleContainer" class="absolute inset-0 pointer-events-none z-20"></div>
+
+                <!-- スロットドラム（上から下へスクロールするアイテム列） -->
+                <div id="reel" class="drum-reel w-full h-full flex flex-col items-center justify-start absolute top-0">
+                    <!-- JSで動的にカブトガニ要素が挿入されます -->
+                </div>
+            </div>
+
+            <!-- ストップボタン (右側・ストップ待ち時に点滅) -->
+            <button id="stopBtn" onclick="handleStop()" disabled class="w-16 sm:w-28 md:w-36 h-64 sm:h-80 md:h-[26rem] bg-gradient-to-b from-rose-500 via-rose-600 to-rose-800 hover:from-rose-400 hover:to-rose-700 active:scale-95 text-white font-black text-lg sm:text-2xl rounded-2xl shadow-2xl border-b-8 border-rose-950 transition-all opacity-50 cursor-not-allowed flex flex-col items-center justify-center gap-2 flex-shrink-0">
+                <svg class="w-8 h-8 sm:w-12 sm:h-12 fill-current drop-shadow" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+                <span>ス<br>ト<br>ッ<br>プ</span>
+            </button>
+
+        </main>
+
+        <!-- 各色の残り本数表示ゾーン -->
+        <footer class="flex-shrink-0 bg-slate-900/90 border-2 border-slate-700 rounded-2xl p-3 shadow-2xl">
+            <div class="text-xs sm:text-sm text-slate-300 text-center mb-2 font-bold tracking-wider">【 各色の残り本数 】</div>
+            <div class="grid grid-cols-9 gap-1.5 sm:gap-3 text-center" id="counterGrid">
+                <!-- カウンターアイテムがJSで初期化されます -->
+            </div>
+        </footer>
+    </div>
+
+    <!-- JavaScriptロジック -->
+    <script>
+        /**
+         * 1. カラー定義・データ設定（ひらがな化および「おれんじ」「むらさき」への変更）
+         */
+        const COLOR_KEYS = ['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'purple', 'white', 'black'];
+        
+        const COLOR_CONFIG = {
+            red:    { name: 'あか', hex: '#EF4444', class: 'color-red', border: 'border-red-500', text: 'text-white', bg: 'bg-red-500' },
+            orange: { name: 'おれんじ', hex: '#F97316', class: 'color-orange', border: 'border-orange-500', text: 'text-white', bg: 'bg-orange-500' },
+            yellow: { name: 'き', hex: '#EAB308', class: 'color-yellow', border: 'border-yellow-500', text: 'text-slate-950', bg: 'bg-yellow-500' },
+            green:  { name: 'みどり', hex: '#22C55E', class: 'color-green', border: 'border-green-500', text: 'text-white', bg: 'bg-green-500' },
+            blue:   { name: 'あお', hex: '#3B82F6', class: 'color-blue', border: 'border-blue-500', text: 'text-white', bg: 'bg-blue-500' },
+            indigo: { name: 'あい', hex: '#6366F1', class: 'color-indigo', border: 'border-indigo-500', text: 'text-slate-50', bg: 'bg-indigo-500' },
+            purple: { name: 'むらさき', hex: '#A855F7', class: 'color-purple', border: 'border-purple-500', text: 'text-slate-50', bg: 'bg-purple-500' },
+            white:  { name: 'しろ', hex: '#FFFFFF', class: 'color-white', border: 'border-white', text: 'text-black', bg: 'bg-white' },
+            black:  { name: 'くろ', hex: '#0F172A', class: 'color-black', border: 'border-white', text: 'text-white', bg: 'bg-slate-950/95' }
+        };
+
+        // 各色の残り本数管理
+        let counts = {
+            red: 14, orange: 14, yellow: 14, green: 14, blue: 14, indigo: 14, purple: 14,
+            white: 1, black: 1
+        };
+
+        // ガチャ抽選手順：毎回ストップボタン押下時（または抽選時）にリアルタイム重み付け抽選を行う
+        function selectWinningColor() {
+            // 現在の総残り数を算出
+            let totalRemaining = 0;
+            Object.keys(counts).forEach(k => totalRemaining += counts[k]);
+
+            if (totalRemaining <= 0) return null;
+
+            // 残り2本以下かつ白または黒が残っている場合、白・黒が最後の最後まで残るのを防ぐため強制選出
+            const rareRemaining = (counts.white > 0 ? 1 : 0) + (counts.black > 0 ? 1 : 0);
+            if (totalRemaining <= rareRemaining) {
+                if (counts.white > 0) return 'white';
+                if (counts.black > 0) return 'black';
+            }
+
+            let weights = {};
+            let weightSum = 0;
+
+            COLOR_KEYS.forEach(key => {
+                let count = counts[key];
+                if (count <= 0) {
+                    weights[key] = 0;
+                    return;
+                }
+                
+                // 白と黒は残り20本未満になるまでは出ない制限
+                if ((key === 'white' || key === 'black') && totalRemaining > 20) {
+                    weights[key] = 0;
+                    return;
+                }
+
+                // 残り本数が5個未満になったら出現率が半分になる重み付け
+                let weight = count;
+                if (count < 5) {
+                    weight = count * 0.5;
+                }
+                weights[key] = weight;
+                weightSum += weight;
+            });
+
+            // 万が一すべての重みが0になってしまった場合のフォールバック（残りから等確率）
+            if (weightSum <= 0) {
+                const availableKeys = COLOR_KEYS.filter(k => counts[k] > 0);
+                if (availableKeys.length === 0) return null;
+                return availableKeys[Math.floor(Math.random() * availableKeys.length)];
+            }
+
+            let randVal = Math.random() * weightSum;
+            let cumulative = 0;
+            for (let key of COLOR_KEYS) {
+                cumulative += (weights[key] || 0);
+                if (randVal <= cumulative) {
+                    return key;
+                }
+            }
+            return COLOR_KEYS.find(k => counts[k] > 0) || 'red';
+        }
+
+        function handleStart() {
+            if (isRunning) return;
+            
+            // スタートボタンを押した瞬間に花火・紙吹雪のパーティクルを即座に消去し、結果表示も消す
+            particles = [];
+            const badge = document.getElementById('resultBadge');
+            badge.classList.remove('opacity-100', 'translate-y-0');
+            badge.classList.add('opacity-0', 'translate-y-2');
+
+            const totalRemaining = Object.values(counts).reduce((a, b) => a + b, 0);
+            if (totalRemaining <= 0) {
+                document.getElementById('statusMessage').innerText = 'すべてのくじが終了しました！';
+                return;
+            }
+
+            winningColor = selectWinningColor();
+            if (!winningColor) return;
+
+            const targetItem = reelItems.find(item => item.color === winningColor && item.index >= COLOR_KEYS.length * 3);
+            targetItemIndex = targetItem ? targetItem.index : COLOR_KEYS.indexOf(winningColor);
+
+            playStartSound();
+            startDrumBGM();
+
+            isRunning = true;
+            isStopping = false;
+            inSpecialEffect = false;
+            speed = maxSpeed;
+
+            startBtn.disabled = true;
+            startBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            startBtn.classList.remove('animate-pulse-fast');
+
+            stopBtn.disabled = false;
+            stopBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            stopBtn.classList.add('animate-pulse-fast');
+
+            glitterOverlay.classList.add('glitter-active');
+            glitterOverlay.style.opacity = '1';
+
+            document.getElementById('resultBadge').classList.add('opacity-0', 'translate-y-4');
+
+            sparkleInterval = setInterval(spawnSparkle, 100);
+            
+            lastTime = performance.now();
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            animationFrameId = requestAnimationFrame(updateSlotLoop);
+        }
+
+        function handleStop() {
+            if (!isRunning || isStopping) return;
+
+            playStrongStopClickSound();
+            isStopping = true;
+
+            stopBtn.disabled = true;
+            stopBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            stopBtn.classList.remove('animate-pulse-fast');
+
+            // 停止が即時スムーズに実行されるようターゲット位置を再同期
+            const frameHeight = document.getElementById('slotFrame').clientHeight;
+            const targetY = (frameHeight / 2) - (targetItemIndex * itemHeight) - (itemHeight / 2);
+            
+            // 現在のスクロール位置からターゲットまでの距離を補正し、すぐにスッと収束するように調整
+            const loopUnitHeight = COLOR_KEYS.length * itemHeight;
+            while (currentPos > targetY) {
+                currentPos -= loopUnitHeight;
+            }
+            while (currentPos < targetY - loopUnitHeight) {
+                currentPos += loopUnitHeight;
+            }
+        }
+
+        function onSlotStopped() {
+            stopDrumBGM();
+            clearInterval(sparkleInterval);
+            glitterOverlay.classList.remove('glitter-active');
+            glitterOverlay.style.opacity = '0';
+
+            const stoppedItem = reelItems[targetItemIndex % reelItems.length];
+            const actualColorKey = stoppedItem.color; 
+            const config = COLOR_CONFIG[actualColorKey];
+
+            playFireworksAndFanfareSound();
+
+            launchFireworks10();
+            launchConfettiWaterfall();
+
+            const badge = document.getElementById('resultBadge');
+            const resultText = document.getElementById('resultText');
+            
+            resultText.innerText = `${config.name}かぶとがに GET！`;
+            resultText.className = `text-base sm:text-2xl font-black tracking-widest px-6 py-1.5 rounded-xl shadow-2xl border-4 ${config.bg} ${config.text} ${config.border}`;
+            
+            badge.classList.remove('opacity-0', 'translate-y-2');
+            badge.classList.add('opacity-100', 'translate-y-0');
+
+            counts[actualColorKey]--;
+            updateCounters();
+
+            setTimeout(() => {
+                startBtn.disabled = false;
+                startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                startBtn.classList.add('animate-pulse-fast'); // 次のスタート待ちで高速点滅再開
+            }, 1000);
+        }
+
+        /**
+         * Web Audio API & 効果音・BGM処理
+         */
+        let audioCtx = null;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContextClass();
+            }
+            // iPad(iOS)のSafari等でAudioContextがsuspended状態になっている場合は必ず再開させる
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        // スタート効果音
+        function playStartSound() {
+            const ctx = getAudioContext();
+            const now = ctx.currentTime;
+            
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(300, now);
+            osc.frequency.exponentialRampToValueAtTime(900, now + 0.2);
+            
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.25);
+        }
+
+        // 強く響くストップボタン押下音
+        function playStrongStopClickSound() {
+            const ctx = getAudioContext();
+            const now = ctx.currentTime;
+
+            // アタックの強い重低音と金属的なクリック感
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(450, now);
+            osc.frequency.exponentialRampToValueAtTime(60, now + 0.15);
+
+            gain.gain.setValueAtTime(0.8, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.16);
+
+            // サブインパクト
+            const subOsc = ctx.createOscillator();
+            const subGain = ctx.createGain();
+            subOsc.type = 'sine';
+            subOsc.frequency.setValueAtTime(150, now);
+            subOsc.frequency.exponentialRampToValueAtTime(30, now + 0.25);
+            subGain.gain.setValueAtTime(0.9, now);
+            subGain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+
+            subOsc.connect(subGain);
+            subGain.connect(ctx.destination);
+            subOsc.start(now);
+            subOsc.stop(now + 0.25);
+        }
+
+        // ドラム回転中の「ワクワク・ゾクゾクする効果音」
+        let drumSoundTimer = null;
+        let drumSoundStep = 0;
+        function startDrumBGM() {
+            const ctx = getAudioContext();
+            drumSoundStep = 0;
+            const arpeggio = [261.63, 329.63, 392.00, 466.16, 523.25, 659.25, 783.99];
+
+            drumSoundTimer = setInterval(() => {
+                const now = ctx.currentTime;
+                
+                const bassOsc = ctx.createOscillator();
+                const bassGain = ctx.createGain();
+                bassOsc.type = 'sawtooth';
+                bassOsc.frequency.setValueAtTime(120 + (drumSoundStep % 4) * 15, now);
+                
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(500, now);
+
+                bassGain.gain.setValueAtTime(0.2, now);
+                bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+                bassOsc.connect(filter);
+                filter.connect(bassGain);
+                bassGain.connect(ctx.destination);
+
+                bassOsc.start(now);
+                bassOsc.stop(now + 0.09);
+
+                if (drumSoundStep % 2 === 0) {
+                    const sparkOsc = ctx.createOscillator();
+                    const sparkGain = ctx.createGain();
+                    sparkOsc.type = 'sine';
+                    const freq = arpeggio[drumSoundStep % arpeggio.length];
+                    sparkOsc.frequency.setValueAtTime(freq, now);
+
+                    sparkGain.gain.setValueAtTime(0.12, now);
+                    sparkGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+                    sparkOsc.connect(sparkGain);
+                    sparkGain.connect(ctx.destination);
+
+                    sparkOsc.start(now);
+                    sparkOsc.stop(now + 0.13);
+                }
+
+                drumSoundStep++;
+            }, 75);
+        }
+
+        function stopDrumBGM() {
+            if (drumSoundTimer) {
+                clearInterval(drumSoundTimer);
+                drumSoundTimer = null;
+            }
+        }
+
+        // コトン、コトンというドラム減速コマ音
+        function playKotonSound() {
+            const ctx = getAudioContext();
+            const now = ctx.currentTime;
+            
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(220, now);
+            osc.frequency.exponentialRampToValueAtTime(80, now + 0.06);
+
+            gain.gain.setValueAtTime(0.4, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.06);
+        }
+
+        // パチンコ演出用：ドンドンという和太鼓の音
+        function playTaikoSound() {
+            const ctx = getAudioContext();
+            const now = ctx.currentTime;
+
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(140, now);
+            osc.frequency.exponentialRampToValueAtTime(35, now + 0.18);
+
+            gain.gain.setValueAtTime(1.0, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.2);
+        }
+
+        // 停止時ファンファーレ & 花火「ヒューッドン」
+        function playFireworksAndFanfareSound() {
+            const ctx = getAudioContext();
+            
+            // 1. ヒューッ (上昇音)
+            const whistleNow = ctx.currentTime;
+            const whistleOsc = ctx.createOscillator();
+            const whistleGain = ctx.createGain();
+            whistleOsc.type = 'sine';
+            whistleOsc.frequency.setValueAtTime(350, whistleNow);
+            whistleOsc.frequency.exponentialRampToValueAtTime(2000, whistleNow + 0.45);
+            
+            whistleGain.gain.setValueAtTime(0.2, whistleNow);
+            whistleGain.gain.linearRampToValueAtTime(0.01, whistleNow + 0.45);
+            
+            whistleOsc.connect(whistleGain);
+            whistleGain.connect(ctx.destination);
+            whistleOsc.start(whistleNow);
+            whistleOsc.stop(whistleNow + 0.45);
+
+            // 2. ドン (爆発音)
+            setTimeout(() => {
+                const boomNow = ctx.currentTime;
+                
+                const boomOsc = ctx.createOscillator();
+                const boomGain = ctx.createGain();
+                boomOsc.type = 'sine';
+                boomOsc.frequency.setValueAtTime(160, boomNow);
+                boomOsc.frequency.exponentialRampToValueAtTime(25, boomNow + 0.7);
+                
+                boomGain.gain.setValueAtTime(0.9, boomNow);
+                boomGain.gain.exponentialRampToValueAtTime(0.001, boomNow + 0.7);
+                
+                boomOsc.connect(boomGain);
+                boomGain.connect(ctx.destination);
+                boomOsc.start(boomNow);
+                boomOsc.stop(boomNow + 0.7);
+
+                const bufferSize = ctx.sampleRate * 0.4;
+                const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                const noise = ctx.createBufferSource();
+                noise.buffer = buffer;
+                
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(700, boomNow);
+                filter.frequency.linearRampToValueAtTime(80, boomNow + 0.4);
+
+                const noiseGain = ctx.createGain();
+                noiseGain.gain.setValueAtTime(0.6, boomNow);
+                noiseGain.gain.exponentialRampToValueAtTime(0.01, boomNow + 0.5);
+
+                noise.connect(filter);
+                filter.connect(noiseGain);
+                noiseGain.connect(ctx.destination);
+                noise.start(boomNow);
+                noise.stop(boomNow + 0.5);
+            }, 420);
+
+            // 3. ファンファーレ
+            setTimeout(() => {
+                const notes = [
+                    { f: 523.25, d: 0.12 },
+                    { f: 659.25, d: 0.12 },
+                    { f: 783.99, d: 0.12 },
+                    { f: 1046.50, d: 0.55 }
+                ];
+                
+                let startTime = ctx.currentTime;
+                notes.forEach((note) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(note.f, startTime);
+                    
+                    gain.gain.setValueAtTime(0.35, startTime);
+                    gain.gain.linearRampToValueAtTime(0.01, startTime + note.d);
+                    
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    
+                    osc.start(startTime);
+                    osc.stop(startTime + note.d);
+                    
+                    startTime += note.d * 0.75;
+                });
+            }, 550);
+        }
+
+        /**
+         * 4. カブトガニSVG描画ユーティリティ (2倍の枠一杯超大サイズ)
+         */
+        function getHorseshoeCrabSVG(colorKey) {
+            const config = COLOR_CONFIG[colorKey];
+            return `
+            <svg class="w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 ${config.class} transform transition-transform filter drop-shadow-2xl" viewBox="0 0 200 200">
+                <!-- 甲羅 (前体) -->
+                <path d="M 100,15 C 35,15 15,60 15,105 C 15,135 35,145 60,145 C 75,145 85,130 100,130 C 115,130 125,145 140,145 C 165,145 185,135 185,105 C 185,60 165,15 100,15 Z" />
+                <!-- 側眼 -->
+                <circle cx="55" cy="65" r="5" fill="#000" opacity="0.7"/>
+                <circle cx="145" cy="65" r="5" fill="#000" opacity="0.7"/>
+                <circle cx="56" cy="64" r="1.5" fill="#FFF"/>
+                <circle cx="146" cy="64" r="1.5" fill="#FFF"/>
+                <!-- 後体 (腹部) -->
+                <path d="M 60,140 L 140,140 L 128,175 L 72,175 Z" />
+                <!-- トゲ -->
+                <polygon points="55,148 43,153 58,158" />
+                <polygon points="145,148 157,153 142,158" />
+                <polygon points="63,163 52,168 65,171" />
+                <polygon points="137,163 148,168 135,171" />
+                <!-- 尾剣 (しっぽ) -->
+                <polygon points="96,170 104,170 102,198 98,198" />
+            </svg>`;
+        }
+
+        /**
+         * 5. ドラムリール構築＆上から下へのスクロールロジック
+         */
+        const reelElement = document.getElementById('reel');
+        const glitterOverlay = document.getElementById('glitterOverlay');
+        const sparkleContainer = document.getElementById('sparkleContainer');
+
+        let reelItems = [];
+        let itemHeight = 240; 
+        let totalItems = 0;
+        
+        let isRunning = false;
+        let isStopping = false;
+        let currentPos = 0; 
+        let speed = 0; 
+        const maxSpeed = 40; 
+        let winningColor = 'red';
+        let targetItemIndex = -1;
+        let animationFrameId = null;
+        let sparkleInterval = null;
+        let lastKotonPos = 0;
+
+        // スクリーンセーバー用変数
+        const ssOverlay = document.getElementById('screensaverOverlay');
+        const ssReel = document.getElementById('ssReel');
+        const ssContainer = document.getElementById('ssSlotContainer');
+        let ssItems = [];
+        let ssPos = 0;
+        let ssSpeed = 35;
+        let ssAnimFrame = null;
+        let inactivityTimer = null;
+        let isScreensaverActive = false; // 初期値を変更するため後ほど制御
+
+        function resetInactivityTimer() {
+            if (isScreensaverActive) {
+                // スクリーンセーバー中なら何もしない
+                return;
+            }
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(() => {
+                if (!isRunning) {
+                    activateScreensaver();
+                }
+            }, 30000); // 30秒
+        }
+
+        function activateScreensaver() {
+            if (isScreensaverActive) return;
+            isScreensaverActive = true;
+            ssOverlay.classList.add('active');
+            initScreensaverReel();
+            lastSsTime = performance.now();
+            if (ssAnimFrame) cancelAnimationFrame(ssAnimFrame);
+            ssAnimFrame = requestAnimationFrame(updateScreensaverLoop);
+        }
+
+        function deactivateScreensaver() {
+            if (!isScreensaverActive) return;
+            isScreensaverActive = false;
+            ssOverlay.classList.remove('active');
+            if (ssAnimFrame) {
+                cancelAnimationFrame(ssAnimFrame);
+                ssAnimFrame = null;
+            }
+            resetInactivityTimer();
+        }
+
+        function initScreensaverReel() {
+            ssReel.innerHTML = '';
+            ssItems = [];
+            const frameH = ssContainer.clientHeight || 400;
+            const ssItemH = frameH; // スクリーンセーバー内は全画面サイズに合わせる
+
+            const colorSequence = [];
+            for (let i = 0; i < 4; i++) {
+                colorSequence.push(...COLOR_KEYS);
+            }
+
+            colorSequence.forEach((color, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.style.height = `${ssItemH}px`;
+                itemDiv.className = 'w-full flex-shrink-0 flex items-center justify-center';
+                // 拡大されたSVG（スクリーンセーバー用は特大サイズ）
+                const conf = COLOR_CONFIG[color];
+                itemDiv.innerHTML = `
+                    <svg class="w-56 h-56 sm:w-80 sm:h-80 md:w-96 md:h-96 ${conf.class} filter drop-shadow-[0_0_25px_rgba(255,255,255,0.6)]" viewBox="0 0 200 200">
+                        <path d="M 100,15 C 35,15 15,60 15,105 C 15,135 35,145 60,145 C 75,145 85,130 100,130 C 115,130 125,145 140,145 C 165,145 185,135 185,105 C 185,60 165,15 100,15 Z" />
+                        <circle cx="55" cy="65" r="5" fill="#000" opacity="0.7"/>
+                        <circle cx="145" cy="65" r="5" fill="#000" opacity="0.7"/>
+                        <circle cx="56" cy="64" r="1.5" fill="#FFF"/>
+                        <circle cx="146" cy="64" r="1.5" fill="#FFF"/>
+                        <path d="M 60,140 L 140,140 L 128,175 L 72,175 Z" />
+                        <polygon points="55,148 43,153 58,158" />
+                        <polygon points="145,148 157,153 142,158" />
+                        <polygon points="63,163 52,168 65,171" />
+                        <polygon points="137,163 148,168 135,171" />
+                        <polygon points="96,170 104,170 102,198 98,198" />
+                    </svg>
+                `;
+                ssReel.appendChild(itemDiv);
+                ssItems.push(itemDiv);
+            });
+            ssPos = 0;
+        }
+
+        let lastSsTime = performance.now();
+        function updateScreensaverLoop(now) {
+            if (!isScreensaverActive) return;
+            const delta = Math.min((now - lastSsTime) / 1000, 0.1);
+            lastSsTime = now;
+
+            const frameH = ssContainer.clientHeight || 400;
+            const loopH = COLOR_KEYS.length * frameH;
+
+            ssPos += ssSpeed * 60 * delta;
+            if (ssPos > 0) {
+                ssPos -= loopH;
+            }
+            ssReel.style.transform = `translate3d(0, ${ssPos}px, 0)`;
+
+            ssAnimFrame = requestAnimationFrame(updateScreensaverLoop);
+        }
+
+        // スクリーンセーバー領域タップで解除＆ガチャ待機状態へ
+        ssOverlay.addEventListener('click', () => {
+            deactivateScreensaver();
+            // スタート状態にせず、スタートボタン待ちの静止状態で待機させる
+        });
+
+        // ユーザー操作イベントの監視
+        ['click', 'touchstart', 'mousemove', 'keydown'].forEach(evt => {
+            window.addEventListener(evt, () => {
+                resetInactivityTimer();
+            });
+        });
+
+        function initReel() {
+            reelElement.innerHTML = '';
+            reelItems = [];
+            
+            const frameHeight = document.getElementById('slotFrame').clientHeight;
+            itemHeight = Math.floor(frameHeight * 0.85); 
+
+            // ループを円滑にするため、全9色セットを6セット連続連結
+            const colorSequence = [];
+            for (let i = 0; i < 6; i++) {
+                colorSequence.push(...COLOR_KEYS);
+            }
+            totalItems = colorSequence.length;
+
+            colorSequence.forEach((color, index) => {
+                const itemContainer = document.createElement('div');
+                itemContainer.style.height = `${itemHeight}px`;
+                itemContainer.className = 'w-full flex-shrink-0 flex flex-col items-center justify-center relative';
+                itemContainer.setAttribute('data-color', color);
+                itemContainer.setAttribute('data-index', index);
+
+                itemContainer.innerHTML = getHorseshoeCrabSVG(color);
+                reelElement.appendChild(itemContainer);
+                reelItems.push({
+                    element: itemContainer,
+                    color: color,
+                    index: index
+                });
+            });
+
+            centerOnIndex(COLOR_KEYS.length * 2);
+        }
+
+        function centerOnIndex(index) {
+            const frameHeight = document.getElementById('slotFrame').clientHeight;
+            const targetY = (frameHeight / 2) - (index * itemHeight) - (itemHeight / 2);
+            currentPos = targetY;
+            reelElement.style.transform = `translate3d(0, ${currentPos}px, 0)`;
+        }
+
+        function spawnSparkle() {
+            if (!isRunning) return;
+            const particle = document.createElement('div');
+            const size = Math.random() * 12 + 6;
+            const left = Math.random() * 80 + 10;
+            const top = Math.random() * 80 + 10;
+            const colors = ['#FECA57', '#FF9FF3', '#54A0FF', '#1DD1A1', '#FFFFFF'];
+            const bg = colors[Math.floor(Math.random() * colors.length)];
+
+            particle.className = 'sparkle-particle rounded-full shadow-lg';
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+            particle.style.left = `${left}%`;
+            particle.style.top = `${top}%`;
+            particle.style.backgroundColor = bg;
+            particle.style.boxShadow = `0 0 10px ${bg}`;
+
+            sparkleContainer.appendChild(particle);
+            setTimeout(() => particle.remove(), 800);
+        }
+
+        /**
+         * 6. ドラムアニメーション ＆ 段階的コマ減速・演出ロジック
+         */
+        let lastTime = performance.now();
+
+        function updateSlotLoop(now) {
+            const delta = Math.min((now - lastTime) / 1000, 0.1);
+            lastTime = now;
+
+            const frameHeight = document.getElementById('slotFrame').clientHeight;
+            const loopUnitHeight = COLOR_KEYS.length * itemHeight;
+
+            if (isRunning && !isStopping) {
+                if (speed < maxSpeed) {
+                    speed += 45 * delta;
+                }
+                currentPos += speed * 60 * delta;
+
+                if (currentPos > 0) {
+                    currentPos -= loopUnitHeight;
+                    lastKotonPos = currentPos;
+                }
+
+                if (currentPos - lastKotonPos >= itemHeight * 0.8) {
+                    playKotonSound();
+                    lastKotonPos = currentPos;
+                }
+
+                reelElement.style.transform = `translate3d(0, ${currentPos}px, 0)`;
+                animationFrameId = requestAnimationFrame(updateSlotLoop);
+
+            } else if (isStopping) {
+                // 停止処理：スムーズかつ確実にターゲット位置へ収束させる
+                const targetY = (frameHeight / 2) - (targetItemIndex * itemHeight) - (itemHeight / 2);
+                let diff = targetY - currentPos;
+
+                while (diff < -loopUnitHeight / 2) {
+                    currentPos -= loopUnitHeight;
+                    diff = targetY - currentPos;
+                }
+                while (diff > loopUnitHeight / 2) {
+                    currentPos += loopUnitHeight;
+                    diff = targetY - currentPos;
+                }
+
+                if (Math.abs(diff) > 1.5) {
+                    // スムーズで確実な減速イージング
+                    currentPos += diff * 0.12;
+
+                    if (Math.abs(currentPos - lastKotonPos) >= itemHeight * 0.75) {
+                        playKotonSound();
+                        lastKotonPos = currentPos;
+                    }
+
+                    reelElement.style.transform = `translate3d(0, ${currentPos}px, 0)`;
+                    animationFrameId = requestAnimationFrame(updateSlotLoop);
+                } else {
+                    currentPos = targetY;
+                    reelElement.style.transform = `translate3d(0, ${currentPos}px, 0)`;
+                    finishSlotStop();
+                }
+            }
+        }
+
+        function finishSlotStop() {
+            isRunning = false;
+            isStopping = false;
+            speed = 0;
+            onSlotStopped();
+        }
+
+        /**
+         * UIカウンター更新（白：白背景・黒枠・黒文字、黒：黒背景・白枠・白文字）
+         */
+        function updateCounters() {
+            const grid = document.getElementById('counterGrid');
+            grid.innerHTML = '';
+            
+            let totalLeft = 0;
+
+            COLOR_KEYS.forEach(key => {
+                const conf = COLOR_CONFIG[key];
+                const count = counts[key];
+                totalLeft += count;
+
+                const item = document.createElement('div');
+                // 枠の縦幅約3倍（h-28〜h-36）、枠線4倍（border-4）、数字フォント3倍（text-3xl〜text-5xl）
+                item.className = `flex flex-col items-center justify-around h-28 sm:h-36 p-1.5 rounded-2xl border-4 ${conf.border} ${conf.bg} shadow-xl transition-all hover:scale-105`;
+                item.innerHTML = `
+                    <span class="text-xs sm:text-sm md:text-base font-black tracking-wider ${conf.text}">${conf.name}</span>
+                    <span class="text-3xl sm:text-4xl md:text-5xl font-black ${conf.text} ${count === 0 ? 'opacity-30' : 'drop-shadow-md'}">${count}</span>
+                `;
+                grid.appendChild(item);
+            });
+
+            document.getElementById('totalCount').innerText = totalLeft;
+        }
+
+        /**
+         * 10. Canvasエフェクト（10発打ち上げ花火＋滝のような紙吹雪）
+         */
+        const canvas = document.getElementById('fxCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            initReel();
+        });
+        resizeCanvas();
+
+        class Particle {
+            constructor(x, y, color, speed, angle) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.friction = 0.95;
+                this.gravity = 0.08;
+                this.alpha = 1;
+                this.decay = Math.random() * 0.015 + 0.008;
+                this.size = Math.random() * 4 + 2;
+            }
+
+            update() {
+                this.vx *= this.friction;
+                this.vy *= this.friction;
+                this.vy += this.gravity;
+                this.x += this.vx;
+                this.y += this.vy;
+                this.alpha -= this.decay;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class Confetti {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 10 + 6;
+                this.color = ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#3B82F6', '#A855F7', '#EC4899', '#FFFFFF'][Math.floor(Math.random() * 8)];
+                this.vx = (Math.random() - 0.5) * 5;
+                this.vy = Math.random() * 4 + 2;
+                this.rotation = Math.random() * 360;
+                this.rotationSpeed = (Math.random() - 0.5) * 12;
+                this.alpha = 1;
+                // 消える速度を速く調整 (decayを大きく)
+                this.decay = 0.012;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.rotation += this.rotationSpeed;
+                this.alpha -= this.decay;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.translate(this.x, this.y);
+                ctx.rotate((this.rotation * Math.PI) / 180);
+                ctx.fillStyle = this.color;
+                ctx.fillRect(-this.size / 2, -this.size / 4, this.size, this.size / 2);
+                ctx.restore();
+            }
+        }
+
+        function launchFireworks10() {
+            for (let i = 0; i < 10; i++) {
+                setTimeout(() => {
+                    const x = Math.random() * (canvas.width * 0.8) + canvas.width * 0.1;
+                    const y = Math.random() * (canvas.height * 0.45) + canvas.height * 0.1;
+                    const color = ['#FF4D4D', '#FF9F43', '#FECA57', '#1DD1A1', '#48DBFB', '#9C88FF', '#FF9FF3', '#FFFFFF'][Math.floor(Math.random() * 8)];
+                    
+                    for (let p = 0; p < 75; p++) {
+                        const angle = (Math.PI * 2 / 75) * p;
+                        const speed = Math.random() * 9 + 2;
+                        particles.push(new Particle(x, y, color, speed, angle));
+                    }
+                }, i * 140);
+            }
+        }
+
+        function launchConfettiWaterfall() {
+            for (let i = 0; i < 160; i++) {
+                setTimeout(() => {
+                    const x = Math.random() * canvas.width;
+                    particles.push(new Confetti(x, -20));
+                }, Math.random() * 1200);
+            }
+        }
+
+        function fxRenderLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.update();
+                p.draw();
+                if (p.alpha <= 0 || p.y > canvas.height + 50) {
+                    particles.splice(i, 1);
+                }
+            }
+
+            requestAnimationFrame(fxRenderLoop);
+        }
+
+        /**
+         * 11. 初期化実行
+         */
+        window.onload = () => {
+            initReel();
+            updateCounters();
+            fxRenderLoop();
+            
+            // 立ち上げた時点でスクリーンセーバーモードを強制起動
+            isScreensaverActive = false; // 一度falseにしてからactivatorを呼ぶ
+            activateScreensaver();
+        };
+    </script>
+</body>
+</html>
